@@ -5,6 +5,7 @@ import datetime
 import pywhatkit
 import os
 import cv2
+import openai
 
 def listen_for_user():
     recognizer = sr.Recognizer()
@@ -47,6 +48,10 @@ def listen_for_user():
 
         elif "open camera" in command :
                 camera_run()
+        
+        elif "research" in command :
+             research()
+        
 
     except sr.UnknownValueError:
         engine.say("Sorry, I couldn't understand. Can you please speak again")
@@ -132,6 +137,8 @@ def play_song_on_youtube():
         engine.runAndWait()
         print(f"Error: {e}")
 
+
+
 def system_control():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
@@ -202,6 +209,73 @@ def camera_run():
     cv2.destroyAllWindows()
 
 
+def research():
+    import openai
+    from openai import OpenAI
+    import speech_recognition as sr
+    import pyttsx3
+
+    # Initialize voice engine
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)
+    engine.setProperty('voice', 'english')  # You can change to 'hindi' if you prefer
+    
+    # Initialize OpenRouter client
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="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"
+    )
+
+    recognizer = sr.Recognizer()
+    mic = sr.Microphone()
+    messages = [
+        {"role": "system", "content": "You are a friendly AI assistant named Jarvis who answers questions clearly and concisely."}
+    ]
+
+    engine.say("Research mode activated, sir. You can ask your question now.")
+    engine.runAndWait()
+    print("Listening for your research question...")
+
+    while True:
+        try:
+            with mic as source:
+                recognizer.adjust_for_ambient_noise(source)
+                audio = recognizer.listen(source)
+                user_input = recognizer.recognize_google(audio).lower()
+                print(f"You said: {user_input}")
+
+            if user_input in ["exit", "quit", "stop"]:
+                engine.say("Exiting research mode. Goodbye sir!")
+                engine.runAndWait()
+                break
+
+            # Add user input to chat history
+            messages.append({"role": "user", "content": user_input})
+
+            # Get AI response from OpenRouter
+            completion = client.chat.completions.create(
+                model="deepseek/deepseek-chat-v3.1:free",
+                messages=messages
+            )
+
+            bot_reply = completion.choices[0].message.content
+            print(f"Jarvis: {bot_reply}\n")
+
+            # Speak the response
+            engine.say(bot_reply)
+            engine.runAndWait()
+
+            # Save reply to chat history
+            messages.append({"role": "assistant", "content": bot_reply})
+
+        except sr.UnknownValueError:
+            engine.say("Sorry sir, I didn’t catch that. Please repeat your question.")
+            engine.runAndWait()
+        except Exception as e:
+            print("Error:", e)
+            engine.say("There was a problem connecting to research mode.")
+            engine.runAndWait()
+            break
 
 
 if __name__ == "__main__":
@@ -210,3 +284,4 @@ if __name__ == "__main__":
         if result == "stop":  # Exit the loop if "stop" is recognized
             print("Bye! see u soon ")
             break  # Exit the loop when "stop" is said
+ 
